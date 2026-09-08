@@ -169,9 +169,10 @@ export function discoverSkills(options: DiscoverOptions): {
       continue;
     }
 
-    let raw: string;
+    // Check size before reading to avoid loading huge files into memory.
+    let stat;
     try {
-      raw = readFileSync(skillPath, 'utf8');
+      stat = lstatSync(skillPath);
     } catch {
       report.omitted.push({
         name: entry,
@@ -179,11 +180,21 @@ export function discoverSkills(options: DiscoverOptions): {
       });
       continue;
     }
-
-    if (raw.length > maxSkillSize) {
+    if (stat.size > maxSkillSize) {
       report.omitted.push({
         name: entry,
-        reason: `exceeds ${maxSkillSize} byte limit (${raw.length} bytes)`,
+        reason: `exceeds ${maxSkillSize} byte limit (${stat.size} bytes)`,
+      });
+      continue;
+    }
+
+    let raw: string;
+    try {
+      raw = readFileSync(skillPath, 'utf8');
+    } catch {
+      report.omitted.push({
+        name: entry,
+        reason: 'unreadable file',
       });
       continue;
     }
