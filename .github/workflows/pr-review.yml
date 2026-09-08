@@ -54,10 +54,11 @@ jobs:
           AGENT_MODEL_MAX_TOKENS: ${{ secrets.AGENT_MODEL_MAX_TOKENS || '8192' }}
           AGENT_MODEL_CONTEXT_WINDOW: ${{ secrets.AGENT_MODEL_CONTEXT_WINDOW || '1000000' }}
           AGENT_MODEL_REASONING: ${{ secrets.AGENT_MODEL_REASONING || 'false' }}
-          # Optional: skill loading env vars (functional in npx review, not flue run)
-          # SKILLS_DIR: .reviewer/skills
-          # MAX_SKILLS: 2
-          # STRICT_SKILLS: false
+          # Optional: skill loading (see README)
+          SKILLS_DIR: .agents/skills
+          MAX_SKILLS: 2
+          MAX_SKILL_SIZE: 16384
+          STRICT_SKILLS: false
           # PR_NUMBER is a trusted source for the agent (github.event is set
           # under both pull_request and pull_request_target; GITHUB_REF alone
           # is the base ref under pull_request_target).
