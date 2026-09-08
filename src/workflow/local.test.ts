@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test, before, after } from 'node:test';
+import { test, after } from 'node:test';
 
 // Save and restore MAX_SKILL_SIZE so tests are deterministic regardless of .env
 const savedMaxSkillSize = process.env.MAX_SKILL_SIZE;

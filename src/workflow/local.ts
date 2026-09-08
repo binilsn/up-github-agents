@@ -108,7 +108,11 @@ export function parseArgs(argv: string[]): {
   }
   if (!maxSkillSizeWasSet && process.env.MAX_SKILL_SIZE) {
     const n = Number(process.env.MAX_SKILL_SIZE);
-    if (Number.isFinite(n) && Number.isInteger(n) && n >= 512 && n <= MAX_SKILL_SIZE_LIMIT) maxSkillSize = n;
+    if (Number.isFinite(n) && Number.isInteger(n) && n >= 512 && n <= MAX_SKILL_SIZE_LIMIT) {
+      maxSkillSize = n;
+    } else {
+      console.warn(`[skills] ignoring invalid MAX_SKILL_SIZE=${process.env.MAX_SKILL_SIZE} (must be an integer 512-${MAX_SKILL_SIZE_LIMIT})`);
+    }
   }
 
   const [argBase, head] = positional;
