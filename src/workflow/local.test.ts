@@ -1,13 +1,25 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test, before, after } from 'node:test';
+
+// Save and restore MAX_SKILL_SIZE so tests are deterministic regardless of .env
+const savedMaxSkillSize = process.env.MAX_SKILL_SIZE;
+process.env.MAX_SKILL_SIZE = '4096';
 
 import { parseArgs } from './local.ts';
+
+after(() => {
+  if (savedMaxSkillSize === undefined) {
+    delete process.env.MAX_SKILL_SIZE;
+  } else {
+    process.env.MAX_SKILL_SIZE = savedMaxSkillSize;
+  }
+});
 
 const defaultSkills = {
   skillsDir: undefined,
   maxSkills: 2,
   strictSkills: false,
-  maxSkillSize: Number(process.env.MAX_SKILL_SIZE) || 4096,
+  maxSkillSize: 4096,
 };
 
 test('parseArgs defaults to HEAD when no args', () => {

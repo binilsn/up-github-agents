@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, lstatSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, lstatSync, realpathSync, readlinkSync } from 'node:fs';
 import { join, resolve, isAbsolute, relative } from 'node:path';
 import matter from 'gray-matter';
 
@@ -96,9 +96,38 @@ export function validateSkillContent(
 export function validateSkillsDir(dir: string, baseDir?: string): string | null {
   const resolved = resolve(dir);
   const base = resolve(baseDir ?? '.');
+  // Resolve symlinks so a symlink out of base is caught.
+  let realResolved: string;
+  let realBase: string;
+  try {
+    realBase = realpathSync(base);
+    // If the path exists, resolve it. If it's a dangling symlink (target
+    // doesn't exist but lstat sees the link), read the link target instead
+    // so the traversal check still applies.
+    if (existsSync(resolved)) {
+      realResolved = realpathSync(resolved);
+    } else {
+      try {
+        const stat = lstatSync(resolved);
+        if (stat.isSymbolicLink()) {
+          // Dangling symlink — use the link target for the check.
+          realResolved = resolve(resolved, '..', readlinkSync(resolved));
+        } else {
+          realResolved = resolved;
+        }
+      } catch {
+        // Path doesn't exist at all — can't be a symlink.
+        realResolved = resolved;
+      }
+    }
+  } catch (err: unknown) {
+    // Only swallow ENOENT (base doesn't exist); let other errors propagate.
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw err;
+  }
   // Normalize to forward slashes for cross-platform path comparison
-  const normalizedResolved = resolved.replace(/\\/g, '/');
-  const normalizedBase = base.replace(/\\/g, '/');
+  const normalizedResolved = realResolved.replace(/\\/g, '/');
+  const normalizedBase = realBase.replace(/\\/g, '/');
   // Prevent path traversal: resolved path must stay within base
   if (!normalizedResolved.startsWith(normalizedBase + '/') && normalizedResolved !== normalizedBase) {
     return null;
