@@ -5,3 +5,5 @@ data/
 reasonix.toml
 .reasonix
 *.tgz
+.agents/
+skills-lock.json
