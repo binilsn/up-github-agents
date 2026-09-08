@@ -57,7 +57,6 @@ jobs:
           # Optional: skill loading (see README)
           SKILLS_DIR: .agents/skills
           MAX_SKILLS: 2
-          MAX_SKILL_SIZE: 16384
           STRICT_SKILLS: false
           # PR_NUMBER is a trusted source for the agent (github.event is set
           # under both pull_request and pull_request_target; GITHUB_REF alone

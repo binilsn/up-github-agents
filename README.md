@@ -190,6 +190,8 @@ Prioritize these findings:
 npm run review -- --skills-dir .reviewer/skills HEAD~1
 npm run review -- --skills-dir .reviewer/skills --max-skills 3 HEAD~1
 npm run review -- --skills-dir .reviewer/skills --strict-skills HEAD~1
+npm run review -- --skills-dir .reviewer/skills --max-skill-size 8192 HEAD~1
+npm run review -- --verbose HEAD  # stream agent thinking to stderr
 ```
 
 | Flag | Default | Description |
