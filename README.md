@@ -160,11 +160,11 @@ prioritize during review.
 
 **Setup:**
 
-1. Create `.reviewer/skills/` in your repo
+1. Create `.agents/skills/` in your repo (or any path — `--skills-dir` is configurable)
 2. Add a subdirectory for each skill with a `SKILL.md` file:
 
 ```
-.reviewer/
+.agents/
 └── skills/
     ├── security/SKILL.md
     └── performance/SKILL.md
@@ -187,10 +187,10 @@ Prioritize these findings:
 **CLI usage:**
 
 ```sh
-npm run review -- --skills-dir .reviewer/skills HEAD~1
-npm run review -- --skills-dir .reviewer/skills --max-skills 3 HEAD~1
-npm run review -- --skills-dir .reviewer/skills --strict-skills HEAD~1
-npm run review -- --skills-dir .reviewer/skills --max-skill-size 8192 HEAD~1
+npm run review -- --skills-dir .agents/skills HEAD~1
+npm run review -- --skills-dir .agents/skills --max-skills 3 HEAD~1
+npm run review -- --skills-dir .agents/skills --strict-skills HEAD~1
+npm run review -- --skills-dir .agents/skills --max-skill-size 8192 HEAD~1
 npm run review -- --verbose HEAD  # stream agent thinking to stderr
 ```
 
