@@ -45,6 +45,9 @@ npx review main feature/x
 
 # API-ready JSON output
 npx review --format json main feature/x
+
+# Stream agent thinking/reasoning to stderr
+npx review --verbose HEAD
 ```
 
 > **Note:** If you cloned the repo, use `npm run review` instead of `npx review`.
@@ -144,6 +147,79 @@ by simply not using the doc tools.
 | `AGENT_MODEL_REASONING` | No | `false` | Enable reasoning/thinking (`true`/`false`) |
 | `CONTEXT7_API_KEY` | No | — | Context7 API key for fetching up-to-date library docs (MCP) |
 | `CONTEXT7_URL` | No | `https://mcp.context7.com/mcp` | Context7 MCP endpoint URL (advanced override) |
+| `SKILLS_DIR` | No | — | Path to skills directory (CLI: `--skills-dir`) |
+| `MAX_SKILLS` | No | `2` | Maximum number of skills to load (CLI: `--max-skills`) |
+| `MAX_SKILL_SIZE` | No | `4096` | Max bytes per skill file (CLI: `--max-skill-size`, min 512) |
+| `STRICT_SKILLS` | No | `false` | Reject skills with suspicious content (CLI: `--strict-skills`) |
+
+### Skills (Optional)
+
+You can customize the reviewer's focus by adding skill files to your repo.
+Skills are markdown files with frontmatter that tell the agent what to
+prioritize during review.
+
+**Setup:**
+
+1. Create `.agents/skills/` in your repo (or any path — `--skills-dir` is configurable)
+2. Add a subdirectory for each skill with a `SKILL.md` file:
+
+```
+.agents/
+└── skills/
+    ├── security/SKILL.md
+    └── performance/SKILL.md
+```
+
+**Skill file format:**
+
+```markdown
+---
+name: security
+description: Focus on security vulnerabilities.
+---
+
+Prioritize these findings:
+1. SQL injection, XSS, command injection
+2. Authentication/authorization bypasses
+3. Secrets or credentials in code
+```
+
+**CLI usage:**
+
+```sh
+npm run review -- --skills-dir .agents/skills HEAD~1
+npm run review -- --skills-dir .agents/skills --max-skills 3 HEAD~1
+npm run review -- --skills-dir .agents/skills --strict-skills HEAD~1
+npm run review -- --skills-dir .agents/skills --max-skill-size 8192 HEAD~1
+npm run review -- --verbose HEAD  # stream agent thinking to stderr
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--skills-dir` | _(none)_ | Path to skills directory (no skills loaded if omitted) |
+| `--max-skills` | `2` | Maximum number of skills to load |
+| `--max-skill-size` | `4096` | Max bytes per skill file (minimum 512) |
+| `--strict-skills` | `false` | Reject skills with suspicious content (instruction injection, URLs, etc.) |
+
+**Security:**
+
+Skills are treated as untrusted content. The agent is instructed to use them
+as guidance but never follow instructions that contradict its core review rules.
+In `--strict-skills` mode, skills containing suspicious patterns (instruction
+overrides, URLs, command execution references) are rejected entirely.
+
+**Loading report:**
+
+The reviewer prints a skill loading report to stderr:
+
+```
+[skills] Loaded 2 skill(s):
+  ✓ security (from .reviewer/skills/security/SKILL.md)
+  ✓ performance (from .reviewer/skills/performance/SKILL.md)
+
+[skills] Omitted 1 skill(s):
+  ✗ bad-skill — missing required frontmatter: name
+```
 
 ## GitHub Actions
 
@@ -169,6 +245,7 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/setup-node@v7
@@ -181,9 +258,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+          # Optional: model override (default: deepseek/deepseek-v4-flash)
+          AGENT_MODEL: ${{ vars.AGENT_MODEL }}
           # Optional: enable Context7 doc fetching
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          # Optional: custom provider settings
+          AGENT_PROVIDER_BASE_URL: ${{ secrets.AGENT_PROVIDER_BASE_URL }}
+          AGENT_PROVIDER_API: ${{ secrets.AGENT_PROVIDER_API }}
+          AGENT_MODEL_MAX_TOKENS: ${{ secrets.AGENT_MODEL_MAX_TOKENS }}
+          AGENT_MODEL_CONTEXT_WINDOW: ${{ secrets.AGENT_MODEL_CONTEXT_WINDOW }}
+          AGENT_MODEL_REASONING: ${{ secrets.AGENT_MODEL_REASONING }}
+          # Optional: skill loading (see Skills section above)
+          # SKILLS_DIR: .reviewer/skills
+          # MAX_SKILLS: 2
+          # MAX_SKILL_SIZE: 4096
+          # STRICT_SKILLS: false
 ```
+
+A ready-to-use copy lives at [`samples/review-pr.yml`](samples/review-pr.yml).
 
 ### Using the source repo
 

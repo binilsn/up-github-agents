@@ -43,6 +43,7 @@
   "homepage": "https://github.com/senbinil/up-reviewer#readme",
   "dependencies": {
     "@flue/runtime": "^2.0.3",
+    "gray-matter": "^4.0.3",
     "valibot": "^1.4.2"
   },
   "devDependencies": {
