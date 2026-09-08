@@ -19,6 +19,7 @@ export interface DiscoverOptions {
   dir: string;
   maxSkills: number;
   strict: boolean;
+  maxSkillSize?: number;
   /** Base directory for path traversal check. Defaults to cwd. */
   baseDir?: string;
 }
@@ -29,8 +30,6 @@ export interface ValidationResult {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-
-const MAX_SKILL_SIZE = 4096; // 4KB
 
 const SUSPICIOUS_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   {
@@ -125,7 +124,9 @@ export function discoverSkills(options: DiscoverOptions): {
   skills: Skill[];
   report: SkillReport;
 } {
-  const { dir, maxSkills, strict, baseDir } = options;
+  // 4KB default: enough for focused agent skills, limits prompt injection surface.
+  // Override via --max-skill-size or MAX_SKILL_SIZE env var.
+  const { dir, maxSkills, strict, baseDir, maxSkillSize = 4096 } = options;
   const report: SkillReport = { loaded: [], omitted: [] };
   const skills: Skill[] = [];
 
@@ -179,10 +180,10 @@ export function discoverSkills(options: DiscoverOptions): {
       continue;
     }
 
-    if (raw.length > MAX_SKILL_SIZE) {
+    if (raw.length > maxSkillSize) {
       report.omitted.push({
         name: entry,
-        reason: `exceeds ${MAX_SKILL_SIZE} byte limit (${raw.length} bytes)`,
+        reason: `exceeds ${maxSkillSize} byte limit (${raw.length} bytes)`,
       });
       continue;
     }

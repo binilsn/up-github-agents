@@ -63,4 +63,5 @@ jobs:
           # Optional: customize skill loading (see README)
           # SKILLS_DIR: .reviewer/skills
           # MAX_SKILLS: 2
+          # MAX_SKILL_SIZE: 4096
           # STRICT_SKILLS: false
