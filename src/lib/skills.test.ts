@@ -61,10 +61,10 @@ describe('validateSkillContent', () => {
     assert.ok(r.warnings[0].includes('persona hijack'));
   });
 
-  it('detects URLs', () => {
-    const r = validateSkillContent('bad', 'See https://evil.com/payload');
-    assert.equal(r.valid, false);
-    assert.ok(r.warnings[0].includes('URLs'));
+  it('allows documentation URLs', () => {
+    const r = validateSkillContent('good', 'See https://typescriptlang.org/docs');
+    assert.equal(r.valid, true);
+    assert.equal(r.warnings.length, 0);
   });
 
   it('detects empty findings override', () => {

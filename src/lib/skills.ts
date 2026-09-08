@@ -65,7 +65,6 @@ const SUSPICIOUS_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
     pattern: /run\s+(a\s+)?(command|script|shell)/gi,
     reason: 'Possible command execution attempt',
   },
-  { pattern: /https?:\/\/[^\s]+/gi, reason: 'Contains URLs' },
   { pattern: /atob\s*\(/gi, reason: 'Calls atob() decoding' },
   { pattern: /base64[_-]?decode/gi, reason: 'Calls base64 decode' },
   { pattern: /curl\s+/gi, reason: 'References HTTP client' },
