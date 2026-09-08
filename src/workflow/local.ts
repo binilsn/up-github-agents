@@ -143,6 +143,7 @@ export async function runLocal(): Promise<void> {
         maxSkills: skillOpts.maxSkills,
         strict: skillOpts.strictSkills,
         maxSkillSize: skillOpts.maxSkillSize,
+        baseDir: process.cwd(),
       });
       printSkillReport(report);
 

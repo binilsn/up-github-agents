@@ -198,6 +198,16 @@ export function discoverSkills(options: DiscoverOptions): {
       continue;
     }
 
+    // Double-check size after read (lstat above is best-effort; file may
+    // have grown between the stat and the read).
+    if (raw.length > maxSkillSize) {
+      report.omitted.push({
+        name: entry,
+        reason: `exceeds ${maxSkillSize} byte limit (${raw.length} bytes)`,
+      });
+      continue;
+    }
+
     let parsed: matter.GrayMatterFile<string>;
     try {
       parsed = matter(raw);
