@@ -97,7 +97,11 @@ export function parseArgs(argv: string[]): {
   }
   if (!maxSkillsWasSet && process.env.MAX_SKILLS) {
     const n = Number(process.env.MAX_SKILLS);
-    if (Number.isFinite(n) && Number.isInteger(n) && n >= 1) maxSkills = n;
+    if (Number.isFinite(n) && Number.isInteger(n) && n >= 1) {
+      maxSkills = n;
+    } else {
+      console.warn(`[skills] ignoring invalid MAX_SKILLS=${process.env.MAX_SKILLS} (must be a positive integer)`);
+    }
   }
   if (!strictSkills && isTruthy(process.env.STRICT_SKILLS)) {
     strictSkills = true;
