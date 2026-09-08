@@ -95,7 +95,7 @@ export function validateSkillContent(
 
 export function validateSkillsDir(dir: string, baseDir?: string): string | null {
   const resolved = resolve(dir);
-  const base = resolve(baseDir ?? '.');
+  const base = resolve(baseDir ?? process.cwd());
   // Resolve symlinks so a symlink out of base is caught.
   let realResolved: string;
   let realBase: string;
