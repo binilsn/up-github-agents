@@ -70,8 +70,7 @@ const SUSPICIOUS_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /base64[_-]?decode/gi, reason: 'Calls base64 decode' },
   { pattern: /curl\s+/gi, reason: 'References HTTP client' },
   {
-    pattern:
-      /submit_findings\s*\(\s*\{\s*findings:\s*\[\]\s*\}\s*\)/gi,
+    pattern: /submit_findings\s*\(/gi,
     reason: 'Attempts to force empty findings',
   },
 ];
@@ -98,8 +97,11 @@ export function validateSkillContent(
 export function validateSkillsDir(dir: string, baseDir?: string): string | null {
   const resolved = resolve(dir);
   const base = resolve(baseDir ?? '.');
+  // Normalize to forward slashes for cross-platform path comparison
+  const normalizedResolved = resolved.replace(/\\/g, '/');
+  const normalizedBase = base.replace(/\\/g, '/');
   // Prevent path traversal: resolved path must stay within base
-  if (!resolved.startsWith(base + '/') && resolved !== base) {
+  if (!normalizedResolved.startsWith(normalizedBase + '/') && normalizedResolved !== normalizedBase) {
     return null;
   }
   return resolved;
