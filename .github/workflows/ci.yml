@@ -46,8 +46,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           # Single source of truth for the Node version (.nvmrc).
           node-version-file: .nvmrc
@@ -55,3 +55,53 @@ jobs:
       - run: npm ci
       - run: npm run check:types
       - run: npm test
+
+  npm-package:
+    needs: [test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Verify dist output
+        run: |
+          test -f dist/workflow/review.js
+          test -f dist/workflow/local.js
+          test -f dist/workflow/github.js
+          test -f dist/agents/reviewer.js
+          head -1 dist/workflow/review.js | grep -q '^#!/usr/bin/env node'
+      - name: Pack and install
+        run: |
+          TARBALL=$(npm pack --pack-destination /tmp | tail -1)
+          mkdir -p /tmp/install && cd /tmp/install
+          npm init -y --silent
+          npm install /tmp/$TARBALL
+          # Verify binary is linked
+          test -f node_modules/.bin/review
+          # Verify exports resolve (ESM)
+          node --input-type=module -e "import 'up-reviewer'; console.log('exports OK')"
+      - name: Run review binary
+        run: |
+          cd /tmp/install
+          # Expected to fail (no API key, no git repo) — but must not crash.
+          # A real crash (syntax error, missing import) prints a stack trace.
+          set +e
+          stderr=$(node_modules/.bin/review 2>&1 1>/dev/null)
+          exit_code=$?
+          set -e
+          if echo "$stderr" | grep -qiE 'SyntaxError|Error:.*Cannot find|ERR_MODULE_NOT_FOUND|TypeError|ReferenceError'; then
+            echo "Binary crashed with an unexpected error:"
+            echo "$stderr"
+            exit 1
+          fi
+          # Non-zero exit with no stderr at all is suspicious (signal kill, etc.)
+          if [ $exit_code -ne 0 ] && [ -z "$stderr" ]; then
+            echo "Binary exited with code $exit_code but produced no output."
+            exit 1
+          fi
+          echo "Smoke test passed (exit $exit_code, expected failure, no crash)"

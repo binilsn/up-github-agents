@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { sanitize, toJson, toMarkdown } from './render.ts';
+import { sanitize, toJson, toMarkdown, renderUsage } from './render.ts';
 import type { ReviewFinding } from '../types/review.ts';
+import type { UsageSummary } from './usage.ts';
 
 test('sanitize strips terminal control characters but keeps newlines and tabs', () => {
   assert.equal(sanitize('a\u001bb\u0000c\nd\te\u0007f'), 'abc\nd\tef');
@@ -113,4 +114,36 @@ test('toJson renders comments with a custom template', () => {
   );
   assert.equal(summary, '1');
   assert.equal(comments[0].body, '🔴 High|a.ts:3');
+});
+
+test('renderUsage formats token counts and cost', () => {
+  const u: UsageSummary = {
+    inputTokens: 12345,
+    outputTokens: 3456,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    totalTokens: 15801,
+    estimatedCostUsd: 0.0023,
+    turns: 2,
+  };
+  const line = renderUsage(u);
+  assert.match(line, /📊 Tokens: 12,345 in \/ 3,456 out/);
+  assert.match(line, /\(15,801 total\)/);
+  assert.match(line, /Est\. cost: \$0\.0023/);
+  assert.doesNotMatch(line, /turn/);
+});
+
+test('renderUsage omits cost when zero', () => {
+  const u: UsageSummary = {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    totalTokens: 0,
+    estimatedCostUsd: 0,
+    turns: 1,
+  };
+  assert.match(renderUsage(u), /total\)/);
+  assert.doesNotMatch(renderUsage(u), /Est\. cost/);
+  assert.doesNotMatch(renderUsage(u), /turn/);
 });

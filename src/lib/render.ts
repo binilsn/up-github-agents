@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import type { ReviewFinding } from '../types/review.ts';
+import type { UsageSummary } from './usage.ts';
 
 const SEVERITY_HEADING: Record<ReviewFinding['severity'], string> = {
   high: '🔴 High',
@@ -150,4 +151,17 @@ export function toJson(
     });
   }
   return { summary: toMarkdown(findings, templates), comments };
+}
+
+/** Compact markdown line for terminal or PR body footer. */
+export function renderUsage(u: UsageSummary): string {
+  let line =
+    `📊 Tokens: ${u.inputTokens.toLocaleString('en-US')} in / ${u.outputTokens.toLocaleString('en-US')} out` +
+    ` (${u.totalTokens.toLocaleString('en-US')} total)`;
+
+  if (u.estimatedCostUsd > 0) {
+    line += ` · Est. cost: $${u.estimatedCostUsd.toFixed(4)}`;
+  }
+
+  return line;
 }

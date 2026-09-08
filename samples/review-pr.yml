@@ -1,5 +1,5 @@
-# Sample caller workflow — drop this into any repo to get automated PR
-# reviews from up-reviewer.
+# Sample workflow — drop this into any repo to get automated PR reviews
+# from up-reviewer.
 #
 # Setup (one time per repo):
 #   1. Add AGENT_API_KEY (or provider-specific key like XIAOMI_API_KEY) as a
@@ -11,17 +11,16 @@
 # (default: xiaomi/mimo-v2.5). See README.md for all env vars.
 #
 # How it works:
-#   This workflow triggers on PR events, then calls the reusable workflow
-#   published in up-reviewer. The reviewer agent fetches the diff via the
-#   GitHub API (gh pr diff) and posts inline comments — nothing runs on
-#   your code, only the diff text is sent to the model.
+#   This workflow triggers on PR events, installs up-reviewer from npm, and
+#   runs the review agent. The agent fetches the diff via the GitHub API
+#   (gh pr diff) and posts inline comments — nothing runs on your code,
+#   only the diff text is sent to the model.
 #
 # Security notes:
 #   - The key is stored as a GitHub secret and never leaves the Actions runner.
-#   - Only same-repo PRs are reviewed (fork PRs are skipped to avoid running
-#     untrusted code with secrets — the reusable workflow enforces this).
-#   - The reviewer uses pull_request_target-style isolation (base-branch code
-#     only, diff via API) — PR authors cannot steer the agent into exfiltration.
+#   - Only same-repo PRs are reviewed (fork PRs are skipped via the job guard).
+#   - The agent fetches the diff via API, never from a checkout — PR authors
+#     cannot steer the agent into exfiltration.
 
 name: PR Review
 
@@ -39,16 +38,29 @@ concurrency:
 
 jobs:
   review:
-    uses: binilsn/up-github-agents/.github/workflows/pr-review.yml@main
-    secrets:
-      AGENT_API_KEY: ${{ secrets.AGENT_API_KEY || secrets.XIAOMI_API_KEY }}
-      AGENT_PROVIDER_BASE_URL: ${{ secrets.AGENT_PROVIDER_BASE_URL }}
-      AGENT_PROVIDER_API: ${{ secrets.AGENT_PROVIDER_API }}
-      AGENT_MODEL_MAX_TOKENS: ${{ secrets.AGENT_MODEL_MAX_TOKENS }}
-      AGENT_MODEL_CONTEXT_WINDOW: ${{ secrets.AGENT_MODEL_CONTEXT_WINDOW }}
-      AGENT_MODEL_REASONING: ${{ secrets.AGENT_MODEL_REASONING }}
-    # Optional: customize skill loading
-    # with:
-    #   skills-dir: .reviewer/skills
-    #   max-skills: '2'
-    #   strict-skills: 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: npm install up-reviewer
+      - run: npx review
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+          # Optional: enable Context7 doc fetching (see README)
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          AGENT_MODEL: ${{ vars.AGENT_MODEL }}
+          AGENT_PROVIDER_BASE_URL: ${{ secrets.AGENT_PROVIDER_BASE_URL }}
+          AGENT_PROVIDER_API: ${{ secrets.AGENT_PROVIDER_API }}
+          AGENT_MODEL_MAX_TOKENS: ${{ secrets.AGENT_MODEL_MAX_TOKENS }}
+          AGENT_MODEL_CONTEXT_WINDOW: ${{ secrets.AGENT_MODEL_CONTEXT_WINDOW }}
+          AGENT_MODEL_REASONING: ${{ secrets.AGENT_MODEL_REASONING }}
+          # Optional: customize skill loading (see README)
+          # SKILLS_DIR: .reviewer/skills
+          # MAX_SKILLS: 2
+          # STRICT_SKILLS: false

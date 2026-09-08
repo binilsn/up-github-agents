@@ -35,17 +35,19 @@ Requires Node >= 24 (native TypeScript type-stripping).
 export DEEPSEEK_API_KEY=sk-xxx
 
 # Review the working tree vs HEAD
-npm run review
+npx review
 
 # Review vs a specific commit
-npm run review -- 8592245
+npx review 8592245
 
 # Review a branch diff
-npm run review -- main feature/x
+npx review main feature/x
 
 # API-ready JSON output
-npm run review -- --format json main feature/x
+npx review --format json main feature/x
 ```
+
+> **Note:** If you cloned the repo, use `npm run review` instead of `npx review`.
 
 ## Configuration
 
@@ -56,13 +58,13 @@ The agent auto-configures the base URL, protocol, and model defaults.
 
 ```bash
 # DeepSeek (default — no AGENT_MODEL needed)
-DEEPSEEK_API_KEY=sk-xxx npm run review
+DEEPSEEK_API_KEY=sk-xxx npx review
 
 # Anthropic (just the key + model override)
-ANTHROPIC_API_KEY=sk-ant-xxx AGENT_MODEL=anthropic/claude-sonnet-4-6 npm run review
+ANTHROPIC_API_KEY=sk-ant-xxx AGENT_MODEL=anthropic/claude-sonnet-4-6 npx review
 
 # OpenAI (just the key + model override)
-OPENAI_API_KEY=sk-xxx AGENT_MODEL=openai/gpt-5.5 npm run review
+OPENAI_API_KEY=sk-xxx AGENT_MODEL=openai/gpt-5.5 npx review
 ```
 
 ### Custom Providers
@@ -76,10 +78,57 @@ AGENT_MODEL=mimo/mimo-model-id \
   AGENT_MODEL_MAX_TOKENS=16384 \
   AGENT_MODEL_CONTEXT_WINDOW=256000 \
   AGENT_MODEL_REASONING=true \
-  npm run review
+  npx review
 ```
 
 See `.env.example` for a template.
+
+### Token Usage Tracking
+
+After each review, token usage is printed to stderr:
+
+```
+[usage] Turns: 1
+[usage] 📊 Tokens: 1,230 in / 368 out (1,598 total)
+```
+
+For **built-in providers** (DeepSeek, Anthropic, OpenAI, etc.), estimated cost is
+also shown:
+
+```
+[usage] Turns: 1
+[usage] 📊 Tokens: 4,711 in / 3,305 out (8,016 total) · Est. cost: $0.0133
+```
+
+Custom providers show token counts only (no cost).
+
+### Context7 (Optional)
+
+The agent can optionally fetch up-to-date library documentation via
+[Context7](https://context7.com) MCP. This is disabled by default — enable it
+by providing your Context7 API key.
+
+```bash
+# Enable doc fetching for the agent
+CONTEXT7_API_KEY=ctx7-xxx npm run review
+```
+
+When enabled, the agent can call `resolve_library_id` and `query_documentation`
+tools to look up current API docs for libraries referenced in the diff. This is
+useful for verifying correct usage against the latest specs.
+
+**Behavior:**
+- **No `CONTEXT7_API_KEY`** — agent works as before, no doc-fetching tools
+- **Key set + valid** — agent can call Context7 to fetch library docs
+- **Key set + invalid/unreachable** — agent continues without those tools, no error
+
+> **Note:** The connection throws immediately if `auth()` is called without a
+> key, so misconfiguration is caught at startup rather than silently producing
+> empty credentials. The agent guard (`if (process.env.CONTEXT7_API_KEY)`)
+> prevents this from firing when the key is intentionally omitted.
+
+Context7 free tier has rate limits. If you hit them, the agent degrades gracefully
+by simply not using the doc tools.
 
 ### Environment Variables
 
@@ -93,6 +142,8 @@ See `.env.example` for a template.
 | `AGENT_MODEL_MAX_TOKENS` | No | `8192` | Max output tokens |
 | `AGENT_MODEL_CONTEXT_WINDOW` | No | `1000000` | Context window size (1M) |
 | `AGENT_MODEL_REASONING` | No | `false` | Enable reasoning/thinking (`true`/`false`) |
+| `CONTEXT7_API_KEY` | No | — | Context7 API key for fetching up-to-date library docs (MCP) |
+| `CONTEXT7_URL` | No | `https://mcp.context7.com/mcp` | Context7 MCP endpoint URL (advanced override) |
 
 ### Skills (Optional)
 
@@ -164,9 +215,48 @@ The reviewer prints a skill loading report to stderr:
 
 The agent reviews every PR automatically via a GitHub Actions workflow.
 
+### Using the npm package
+
+```yaml
+# .github/workflows/review-pr.yml
+name: PR Review
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: npm install up-reviewer
+      - run: npx review
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+          # Optional: enable Context7 doc fetching
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+```
+
+### Using the source repo
+
 **Setup:**
+
 1. Add `AGENT_API_KEY` (or provider key like `XIAOMI_API_KEY`) as a repository secret
-2. Drop [samples/review-pr.yml](samples/review-pr.yml) into `.github/workflows/`
+2. Copy [.github/workflows/pr-review.yml](.github/workflows/pr-review.yml) into your repo's `.github/workflows/`
 3. Push to the default branch — it activates on the next PR
 
 The workflow uses `pull_request_target` so only base-branch code runs with secrets.
@@ -178,14 +268,15 @@ and fails loudly otherwise.
 Local CLI:
 
 ```
-npm run review <base> [head]
+npx review <base> [head]
         │
         ▼
-src/workflow/review.ts          loads src/app.ts (provider registration)
-        │                       fetches `git diff --no-color -U3 <base> [head]`
-        │                       (execFile, no shell; raw text, zero parsing)
+src/workflow/review.ts           auto-detects mode, dispatches to:
+        │                        ├── local.ts  (LOCAL MODE:  git diff)
+        │                        └── github.ts (GITHUB ACTIONS MODE: gh pr diff)
         ▼
 src/agents/reviewer.ts          sandbox-less review, single validated tool
+        │                       (optionally mounts Context7 MCP for doc fetching)
         │                       `submit_findings` ({findings: [...]})
         ▼
 workflow validates the tool     captures the tool call via toolCallId,
@@ -198,11 +289,15 @@ GitHub Actions (same agent, different mode):
 PR opened/synchronized
         │
         ▼
-.github/workflows/pr-review.yml  `npx flue run src/agents/reviewer.ts`
-        │                         with GH_TOKEN + AGENT_API_KEY env
+npx review (GITHUB_ACTIONS=true)   review.ts detects Actions mode,
+        │                           dispatches to github.ts
+        ▼
+github.ts                          validates PR_NUMBER, GH_TOKEN,
+        │                          AGENT_API_KEY; dispatches Reviewer
         ▼
 src/agents/reviewer.ts           GITHUB ACTIONS MODE: `fetch_pr_diff` loads
         │                         the PR diff via `gh pr diff`; the agent
+        │                         optionally uses Context7 MCP for docs;
         ▼                         reviews it
 `post_review` tool               validates findings, POSTs a PR review
                                  (event COMMENT + inline comments) via `gh api`

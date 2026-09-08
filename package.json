@@ -1,6 +1,6 @@
 {
   "name": "up-reviewer",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "Flue agent that reviews git diffs and reports structured, line-anchored findings",
   "files": [
     "dist/",
@@ -8,7 +8,7 @@
     "flue.config.ts"
   ],
   "bin": {
-    "review-diff": "dist/workflow/review.js"
+    "review": "dist/workflow/review.js"
   },
   "exports": {
     ".": {
@@ -24,13 +24,13 @@
     "prepack": "npm run build",
     "check:types": "tsc --noEmit",
     "review": "node --env-file-if-exists=.env src/workflow/review.ts",
-    "test": "node --test \"src/lib/*.test.ts\""
+    "test": "node --test \"src/**/*.test.ts\""
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/senbinil/up-reviewer.git"
   },
-  "keywords": [],
+  "keywords": ["code-review", "git", "diff", "pull-request", "agent", "flue"],
   "author": "",
   "license": "MIT",
   "engines": {

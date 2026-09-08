@@ -47,7 +47,7 @@ function extractProviderId(modelSpecifier: string): string {
  *   AGENT_PROVIDER_API       - Wire protocol: "openai-completions" (default) or "anthropic-messages"
  *   AGENT_API_KEY            - API key for the custom provider
  *   AGENT_MODEL_MAX_TOKENS   - Max output tokens (default: 8192)
- *   AGENT_MODEL_CONTEXT_WINDOW - Context window size (default: 128000)
+ *   AGENT_MODEL_CONTEXT_WINDOW - Context window size (default: 1000000)
  *   AGENT_MODEL_REASONING    - Enable reasoning/thinking (default: false)
  */
 // Mapping of provider IDs to their environment variable names
@@ -106,7 +106,9 @@ async function registerCustomProvider(): Promise<void> {
   const baseUrl = process.env.AGENT_PROVIDER_BASE_URL;
   const apiType = process.env.AGENT_PROVIDER_API ?? 'openai-completions';
 
-  // Model-specific configuration
+  // Model-specific configuration. Context window defaults to 1M tokens to
+  // accommodate modern models (DeepSeek, GPT-4, Claude). Override via
+  // AGENT_MODEL_CONTEXT_WINDOW if your model has a smaller window.
   const maxTokens = Number(process.env.AGENT_MODEL_MAX_TOKENS) || 8192;
   const contextWindow = Number(process.env.AGENT_MODEL_CONTEXT_WINDOW) || 1000000;
   const reasoning = process.env.AGENT_MODEL_REASONING === 'true';
