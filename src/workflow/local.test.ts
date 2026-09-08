@@ -128,5 +128,9 @@ test('parseArgs throws on missing --max-skill-size value', () => {
 });
 
 test('parseArgs throws on --max-skill-size below minimum', () => {
-  assert.throws(() => parseArgs(['--max-skill-size', '100']), /--max-skill-size must be an integer >= 512/);
+  assert.throws(() => parseArgs(['--max-skill-size', '100']), /--max-skill-size must be 512-65536/);
+});
+
+test('parseArgs throws on --max-skill-size above maximum', () => {
+  assert.throws(() => parseArgs(['--max-skill-size', '100000']), /--max-skill-size must be 512-65536/);
 });

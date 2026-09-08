@@ -31,6 +31,8 @@ export interface ValidationResult {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+export const MAX_SKILL_SIZE_LIMIT = 65536; // 64KB hard cap
+
 const SUSPICIOUS_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   {
     pattern:
@@ -124,8 +126,9 @@ export function discoverSkills(options: DiscoverOptions): {
   report: SkillReport;
 } {
   // 4KB default: enough for focused agent skills, limits prompt injection surface.
-  // Override via --max-skill-size or MAX_SKILL_SIZE env var.
+  // Override via --max-skill-size or MAX_SKILL_SIZE env var (max 64KB).
   const { dir, maxSkills, strict, baseDir, maxSkillSize = 4096 } = options;
+  const clampedSize = Math.min(maxSkillSize, MAX_SKILL_SIZE_LIMIT);
   const report: SkillReport = { loaded: [], omitted: [] };
   const skills: Skill[] = [];
 
@@ -158,7 +161,7 @@ export function discoverSkills(options: DiscoverOptions): {
     }
 
     const skillPath = join(resolvedDir, entry, 'SKILL.md');
-    const relPath = relative('.', skillPath);
+    const relPath = relative(resolvedDir, skillPath);
 
     if (!existsSync(skillPath)) {
       report.omitted.push({
@@ -179,10 +182,10 @@ export function discoverSkills(options: DiscoverOptions): {
       });
       continue;
     }
-    if (stat.size > maxSkillSize) {
+    if (stat.size > clampedSize) {
       report.omitted.push({
         name: entry,
-        reason: `exceeds ${maxSkillSize} byte limit (${stat.size} bytes)`,
+        reason: `exceeds ${clampedSize} byte limit (${stat.size} bytes)`,
       });
       continue;
     }
@@ -200,10 +203,10 @@ export function discoverSkills(options: DiscoverOptions): {
 
     // Double-check size after read (lstat above is best-effort; file may
     // have grown between the stat and the read).
-    if (raw.length > maxSkillSize) {
+    if (raw.length > clampedSize) {
       report.omitted.push({
         name: entry,
-        reason: `exceeds ${maxSkillSize} byte limit (${raw.length} bytes)`,
+        reason: `exceeds ${clampedSize} byte limit (${raw.length} bytes)`,
       });
       continue;
     }

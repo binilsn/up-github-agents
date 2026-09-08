@@ -20,7 +20,7 @@ import { findingsSchema, parseFindings } from '../lib/findings.ts';
 import { toJson, toMarkdown, sanitize, renderUsage } from '../lib/render.ts';
 import { trackTools } from './tool-tracker.ts';
 import { setupUsageCollector } from '../lib/usage.ts';
-import { discoverSkills, printSkillReport, escapeXml } from '../lib/skills.ts';
+import { discoverSkills, printSkillReport, escapeXml, MAX_SKILL_SIZE_LIMIT } from '../lib/skills.ts';
 import type { ReviewFinding } from '../types/review.ts';
 
 type Format = 'markdown' | 'json';
@@ -79,8 +79,8 @@ export function parseArgs(argv: string[]): {
       if (i + 1 >= argv.length) throw new Error('--max-skill-size requires a number argument (bytes)');
       const raw = argv[++i];
       const n = Number(raw);
-      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 512) {
-        throw new Error(`--max-skill-size must be an integer >= 512, got "${raw}"`);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 512 || n > MAX_SKILL_SIZE_LIMIT) {
+        throw new Error(`--max-skill-size must be 512-${MAX_SKILL_SIZE_LIMIT}, got "${raw}"`);
       }
       maxSkillSize = n;
       maxSkillSizeWasSet = true;
@@ -104,7 +104,7 @@ export function parseArgs(argv: string[]): {
   }
   if (!maxSkillSizeWasSet && process.env.MAX_SKILL_SIZE) {
     const n = Number(process.env.MAX_SKILL_SIZE);
-    if (Number.isFinite(n) && Number.isInteger(n) && n >= 512) maxSkillSize = n;
+    if (Number.isFinite(n) && Number.isInteger(n) && n >= 512 && n <= MAX_SKILL_SIZE_LIMIT) maxSkillSize = n;
   }
 
   const [argBase, head] = positional;
@@ -183,6 +183,7 @@ ${escapeXml(s.content)}
       '<DIFF>',
       diff,
       '</DIFF>',
+      '',
       skillsPrompt,
     ].join('\n');
 
