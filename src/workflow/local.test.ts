@@ -3,7 +3,12 @@ import { test } from 'node:test';
 
 import { parseArgs } from './local.ts';
 
-const defaultSkills = { skillsDir: undefined, maxSkills: 2, strictSkills: false, maxSkillSize: Number(process.env.MAX_SKILL_SIZE) || 4096 };
+const defaultSkills = {
+  skillsDir: undefined,
+  maxSkills: 2,
+  strictSkills: false,
+  maxSkillSize: Number(process.env.MAX_SKILL_SIZE) || 4096,
+};
 
 test('parseArgs defaults to HEAD when no args', () => {
   assert.deepEqual(parseArgs([]), { base: 'HEAD', head: undefined, format: 'markdown', skills: defaultSkills, verbose: false });

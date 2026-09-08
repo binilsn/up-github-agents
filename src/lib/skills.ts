@@ -34,42 +34,42 @@ export interface ValidationResult {
 const SUSPICIOUS_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   {
     pattern:
-      /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|rules)/gi,
+      /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|rules)/i,
     reason: 'Possible instruction override attempt',
   },
   {
-    pattern: /<\/SKILL>/gi,
+    pattern: /<\/SKILL>/i,
     reason: 'Contains XML closing tag (possible prompt injection)',
   },
   {
-    pattern: /disregard\s+(all\s+)?(previous|prior|above)/gi,
+    pattern: /disregard\s+(all\s+)?(previous|prior|above)/i,
     reason: 'Possible instruction override attempt',
   },
   {
-    pattern: /you\s+are\s+now\s+(a|an)\s+/gi,
+    pattern: /you\s+are\s+now\s+(a|an)\s+/i,
     reason: 'Possible persona hijack attempt',
   },
   {
-    pattern: /new\s+(system\s+)?instructions/gi,
+    pattern: /new\s+(system\s+)?instructions/i,
     reason: 'Possible instruction override attempt',
   },
   {
-    pattern: /override\s+(your|the)\s+(system|original|previous)/gi,
+    pattern: /override\s+(your|the)\s+(system|original|previous)/i,
     reason: 'Possible instruction override attempt',
   },
   {
-    pattern: /call\s+(bash|exec|write|edit|delete)\s+/gi,
+    pattern: /call\s+(bash|exec|write|edit|delete)\s+/i,
     reason: 'References non-review tools',
   },
   {
-    pattern: /run\s+(a\s+)?(command|script|shell)/gi,
+    pattern: /run\s+(a\s+)?(command|script|shell)/i,
     reason: 'Possible command execution attempt',
   },
-  { pattern: /atob\s*\(/gi, reason: 'Calls atob() decoding' },
-  { pattern: /base64[_-]?decode/gi, reason: 'Calls base64 decode' },
-  { pattern: /curl\s+/gi, reason: 'References HTTP client' },
+  { pattern: /atob\s*\(/i, reason: 'Calls atob() decoding' },
+  { pattern: /base64[_-]?decode/i, reason: 'Calls base64 decode' },
+  { pattern: /curl\s+/i, reason: 'References HTTP client' },
   {
-    pattern: /submit_findings\s*\(/gi,
+    pattern: /submit_findings\s*\(/i,
     reason: 'Attempts to force empty findings',
   },
 ];
@@ -83,8 +83,6 @@ export function validateSkillContent(
   const warnings: string[] = [];
 
   for (const { pattern, reason } of SUSPICIOUS_PATTERNS) {
-    // Reset regex state for global patterns
-    pattern.lastIndex = 0;
     if (pattern.test(content)) {
       warnings.push(`[${name}] ${reason}`);
     }
